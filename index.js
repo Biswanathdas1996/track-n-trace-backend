@@ -79,6 +79,35 @@ app.post("/create", async (req, res) => {
   }
 });
 
+app.post("/initiate-token-info", async (req, res) => {
+  if (!req.body) res.json("Please add body");
+  const tokenUID = req?.query?.id;
+  if (!tokenUID) res.json("Token id missing");
+  const tokenURI = JSON.stringify(req.body);
+  try {
+    const response = await contract.methods
+      .addData(tokenUID, tokenURI)
+      .send({
+        from: signer.address,
+        // gas: await tx.estimateGas(),
+        gas: "4700000",
+        value: 0,
+      })
+      .once("transactionHash", (txhash) => {
+        console.log(`Mining transaction ...`);
+        console.log(txhash);
+        res.json(txhash);
+      })
+      .catch((error) => {
+        const errorData = { error };
+        res.json(errorData.error);
+      });
+    res.json(response);
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 app.post("/add-to-token", async (req, res) => {
   if (!req.body) res.json("Please add body");
 
