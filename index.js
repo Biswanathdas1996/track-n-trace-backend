@@ -118,7 +118,13 @@ app.post("/add-to-token", async (req, res) => {
     .tokenURI(tokenUID)
     .call({ from: signer.address });
   const tokenData = response && JSON.parse(response);
-  tokenData.transction.push(req.body);
+  if (tokenData?.transction) {
+    tokenData.transction.push(req.body);
+  } else {
+    const transaction = [req.body];
+    tokenData.transction = transaction;
+  }
+
   const tokenURI = JSON.stringify(tokenData);
   try {
     const response = await contract.methods
