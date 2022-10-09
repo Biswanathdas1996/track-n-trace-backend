@@ -5,17 +5,23 @@ const app = require("express")();
 const cors = require("cors");
 const shortid = require("shortid");
 var Web3 = require("web3");
+var { encode, decode } = require("js-base64");
 var ABI = require("./ABI.json");
 var ADDRESS = require("./Address.json");
 
-var InfuraNodeURL = `https://goerli.infura.io/v3/24022fda545f41beb59334bdbaf3ef32`;
-var WalletPrivateKey =
-  "8c5948e0dbc4163b176ea8cfb7ca6a3d2e9c52d2d1df7c363fababb8f2eb6f42";
-
-const web3 = new Web3(new Web3.providers.HttpProvider(InfuraNodeURL));
-const signer = web3.eth.accounts.privateKeyToAccount(WalletPrivateKey);
-web3.eth.accounts.wallet.add(signer);
-const contract = new web3.eth.Contract(ABI, ADDRESS);
+const getConfig = (token) => {
+  const tokenDecoded = decode(token);
+  const rawToken = JSON.parse(tokenDecoded);
+  const web3 = new Web3(
+    new Web3.providers.HttpProvider(rawToken?.InfuraNodeURL)
+  );
+  const signer = web3.eth.accounts.privateKeyToAccount(
+    rawToken?.WalletPrivateKey
+  );
+  web3.eth.accounts.wallet.add(signer);
+  const contract = new web3.eth.Contract(ABI, ADDRESS);
+  return { contract, signer };
+};
 
 app.use(cors());
 
@@ -41,6 +47,10 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/get-all-token", async (req, res) => {
+  if (!req.headers["app-config-token"]) {
+    return res.status(401).json({ message: "Missing Authorization Header" });
+  }
+  const { contract, signer } = getConfig(req.headers["app-config-token"]);
   try {
     const response = await contract.methods
       .getToken()
@@ -53,6 +63,10 @@ app.get("/get-all-token", async (req, res) => {
 });
 
 app.post("/create", async (req, res) => {
+  if (!req.headers["app-config-token"]) {
+    return res.status(401).json({ message: "Missing Authorization Header" });
+  }
+  const { contract, signer } = getConfig(req.headers["app-config-token"]);
   try {
     const response = await contract.methods
       .create()
@@ -78,8 +92,12 @@ app.post("/create", async (req, res) => {
 });
 
 app.post("/initiate-token-info", async (req, res) => {
+  if (!req.headers["app-config-token"]) {
+    return res.status(401).json({ message: "Missing Authorization Header" });
+  }
+  const { contract, signer } = getConfig(req.headers["app-config-token"]);
   if (!req.body) res.json("Please add body");
-  const tokenUID = req?.query?.id;
+  const tokenUID = req?.query?.token;
   if (!tokenUID) res.json("Token id missing");
   const tokenURI = JSON.stringify(req.body);
   try {
@@ -107,9 +125,13 @@ app.post("/initiate-token-info", async (req, res) => {
 });
 
 app.post("/add-transaction", async (req, res) => {
+  if (!req.headers["app-config-token"]) {
+    return res.status(401).json({ message: "Missing Authorization Header" });
+  }
+  const { contract, signer } = getConfig(req.headers["app-config-token"]);
   if (!req.body) res.json("Please add body");
 
-  const tokenUID = req?.query?.id;
+  const tokenUID = req?.query?.token;
   if (!tokenUID) res.json("Token id missing");
 
   const response = await contract.methods
@@ -149,7 +171,14 @@ app.post("/add-transaction", async (req, res) => {
 });
 
 app.get("/get-token-data", async (req, res) => {
-  const tokenId = req?.query?.id;
+  // check for basic auth header
+
+  if (!req.headers["app-config-token"]) {
+    return res.status(401).json({ message: "Missing Authorization Header" });
+  }
+  const { contract, signer } = getConfig(req.headers["app-config-token"]);
+
+  const tokenId = req?.query?.token;
   try {
     const response = await contract.methods
       .tokenURI(tokenId)
