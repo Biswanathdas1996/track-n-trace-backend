@@ -4,15 +4,13 @@ const express = require("express");
 const app = require("express")();
 const cors = require("cors");
 const shortid = require("shortid");
-
 var Web3 = require("web3");
-
 var ABI = require("./ABI.json");
 var ADDRESS = require("./Address.json");
 
-var InfuraNodeURL = `https://rinkeby.infura.io/v3/24022fda545f41beb59334bdbaf3ef32`;
+var InfuraNodeURL = `https://goerli.infura.io/v3/24022fda545f41beb59334bdbaf3ef32`;
 var WalletPrivateKey =
-  "33e8389993eea0488d813b34ee8d8d84f74f204c17b95896e9380afc6a514dc7";
+  "8c5948e0dbc4163b176ea8cfb7ca6a3d2e9c52d2d1df7c363fababb8f2eb6f42";
 
 const web3 = new Web3(new Web3.providers.HttpProvider(InfuraNodeURL));
 const signer = web3.eth.accounts.privateKeyToAccount(WalletPrivateKey);
@@ -57,7 +55,7 @@ app.get("/get-all-token", async (req, res) => {
 app.post("/create", async (req, res) => {
   try {
     const response = await contract.methods
-      .createTrack(JSON.stringify(req.body))
+      .create()
       .send({
         from: signer.address,
         // gas: await tx.estimateGas(),
@@ -96,11 +94,11 @@ app.post("/initiate-token-info", async (req, res) => {
       .once("transactionHash", (txhash) => {
         console.log(`Mining transaction ...`);
         console.log(txhash);
-        res.json(txhash);
+        return txhash;
       })
       .catch((error) => {
         const errorData = { error };
-        res.json(errorData.error);
+        return { error: errorData.error };
       });
     res.json(response);
   } catch (error) {
@@ -108,7 +106,7 @@ app.post("/initiate-token-info", async (req, res) => {
   }
 });
 
-app.post("/add-to-token", async (req, res) => {
+app.post("/add-transaction", async (req, res) => {
   if (!req.body) res.json("Please add body");
 
   const tokenUID = req?.query?.id;
@@ -138,11 +136,11 @@ app.post("/add-to-token", async (req, res) => {
       .once("transactionHash", (txhash) => {
         console.log(`Mining transaction ...`);
         console.log(txhash);
-        res.json(txhash);
+        return txhash;
       })
       .catch((error) => {
         const errorData = { error };
-        res.json(errorData.error);
+        return { error: errorData.error };
       });
     res.json(response);
   } catch (error) {
